@@ -57,6 +57,10 @@ export function HomePage() {
       navigate('/home');
       setreload(true);
     }
+    else
+    {
+      navigate('/')
+    }
   }, [isVerified]);
 
   useEffect(() => {
