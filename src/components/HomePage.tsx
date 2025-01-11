@@ -68,6 +68,10 @@ export function HomePage() {
     {
       navigate('/home');
     }
+    else
+    {
+      navigate('/')
+    }
   }, []);
 
   useEffect(() => {
