@@ -19,6 +19,13 @@ export function AuthForm() {
 
     try {
       if (mode === 'login') {
+
+        const isAuthenticated2  = await nhost.auth.isAuthenticatedAsync();
+
+        if(isAuthenticated2){
+          navigate('/home')
+        }
+
         // Handle login
         const { error } = await nhost.auth.signIn({
           email,
