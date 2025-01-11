@@ -26,12 +26,14 @@ export function HomePage() {
   const [loading, setLoading] = useState(false);
   const [summary, setSummary] = useState('');
   const [history, setHistory] = useState<VideoSummary[]>([]);
+  const [isVerified, setIsVerified] = useState(false);
+  const [reload, setreload] = useState(false);
   const navigate = useNavigate();
   const { signOut } = useSignOut();
   const userId = useUserId();
 
   const saveTokenToLocalStorage = async () => {
-    const token = await nhost.auth.getAccessToken();
+    const token =  nhost.auth.getAccessToken();
     if (token) {
       localStorage.setItem('accessToken', token);
     }
@@ -40,11 +42,31 @@ export function HomePage() {
   const validateSession = async () => {
     const token = localStorage.getItem('accessToken');
     const isAuthenticated = await nhost.auth.isAuthenticatedAsync();
-    if (!token || !isAuthenticated) {
-      // Redirect to login if the token is missing or session is invalid
-      navigate('/login');
+    const user = nhost.auth.getUser();
+
+    // Check if user is verified
+
+    if (token && isAuthenticated) {
+      
+      setIsVerified(true);
+      
     }
   };
+
+  useEffect(() => {
+    if(isVerified){
+      navigate('/home');
+      setreload(true);
+    }
+  }, [isVerified]);
+
+  useEffect(() => {
+    if(reload){
+      fetchHistory();
+    }
+  }, [reload]);
+
+ 
 
   useEffect(() => {
     validateSession();
@@ -87,9 +109,7 @@ export function HomePage() {
     }
   };
 
-  useEffect(() => {
-    if (userId) fetchHistory();
-  }, [userId]);
+  
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -142,34 +162,44 @@ export function HomePage() {
 
   const handleLogout = async () => {
     await signOut();
-    localStorage.removeItem('accessToken');
-    navigate('/login');
+    localStorage.setItem('accessToken','');
+    navigate('/');
   };
 
   return (
     <div className="min-h-screen bg-gray-100 p-4 flex">
       {/* Sidebar */}
       <div className="w-1/4 bg-white rounded-lg shadow-md p-4 mr-4">
-        <h2 className="text-lg font-bold text-gray-800 mb-4">History</h2>
-        <ul className="space-y-4">
-          {history.map((item) => (
-            <li
-              key={item.id}
-              className="cursor-pointer p-2 border rounded-lg hover:bg-gray-100"
-              onClick={() => setSummary(item.summary)}
-            >
-              <p className="font-medium text-sm text-gray-700 truncate">{item.summary.split('\n')[0] || item.video_id}</p>
-              <p className="text-xs text-gray-500">{new Date(item.created_at).toLocaleString()}</p>
-            </li>
-          ))}
-        </ul>
+        <h2 className="text-lg font-bold text-gray-800 mb-4">
+          { 'History' }
+        </h2>
+        {(
+          <ul className="space-y-4">
+            {history.map((item) => (
+              <li
+                key={item.id}
+                className="cursor-pointer p-2 border rounded-lg hover:bg-gray-100"
+                onClick={() => setSummary(item.summary)}
+              >
+                <p className="font-medium text-sm text-gray-700 truncate">
+                  {item.summary.split('\n')[0] || item.video_id}
+                </p>
+                <p className="text-xs text-gray-500">{new Date(item.created_at).toLocaleString()}</p>
+              </li>
+            ))}
+          </ul>
+        )}
       </div>
 
       {/* Main Content */}
       <div className="w-3/4">
         <div className="bg-white rounded-lg shadow-md p-6">
           <div className="flex justify-between items-center mb-8">
-            <h1 className="text-2xl font-bold text-gray-800">YouTube Link Manager</h1>
+            <h1 className="text-2xl font-bold text-gray-800">
+              {
+                 'YouTube Video Summary'
+                 }
+            </h1>
             <button
               onClick={handleLogout}
               className="flex items-center gap-2 text-gray-600 hover:text-gray-800"
@@ -179,35 +209,36 @@ export function HomePage() {
             </button>
           </div>
 
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="youtubeLink">
-                YouTube Link
-              </label>
-              <div className="relative">
-                <Youtube className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
-                <input
-                  id="youtubeLink"
-                  type="url"
-                  value={youtubeLink}
-                  onChange={(e) => setYoutubeLink(e.target.value)}
-                  className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="https://www.youtube.com/watch?v=..."
-                  pattern="^https?:\/\/(www\.)?youtube\.com\/watch\?v=.+"
-                  title="Please enter a valid YouTube video URL"
-                  required
-                />
+          {(
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div>
+                <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="youtubeLink">
+                  YouTube Link
+                </label>
+                <div className="relative">
+                  <Youtube className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
+                  <input
+                    id="youtubeLink"
+                    type="url"
+                    value={youtubeLink}
+                    onChange={(e) => setYoutubeLink(e.target.value)}
+                    className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="https://www.youtube.com/watch?v=..."
+                    title="Please enter a valid YouTube video URL"
+                    required
+                  />
+                </div>
               </div>
-            </div>
 
-            <button
-              type="submit"
-              disabled={loading}
-              className="flex items-center justify-center gap-2 w-full bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200"
-            >
-              {loading ? 'Processing...' : <><Send className="h-5 w-5" /> Process Link</>}
-            </button>
-          </form>
+              <button
+                type="submit"
+                disabled={loading}
+                className="flex items-center justify-center gap-2 w-full bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200"
+              >
+                {loading ? 'Processing...' : <><Send className="h-5 w-5" /> Process Link</>}
+              </button>
+            </form>
+          )}
 
           {summary && (
             <div className="mt-8">
