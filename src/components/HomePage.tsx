@@ -42,7 +42,6 @@ export function HomePage() {
   const validateSession = async () => {
     const token = localStorage.getItem('accessToken');
     const isAuthenticated = await nhost.auth.isAuthenticatedAsync();
-    const user = nhost.auth.getUser();
 
     // Check if user is verified
 
@@ -59,6 +58,13 @@ export function HomePage() {
       setreload(true);
     }
   }, [isVerified]);
+
+  useEffect(() => {
+    if(isVerified)
+    {
+      navigate('/home');
+    }
+  }, []);
 
   useEffect(() => {
     if(reload){

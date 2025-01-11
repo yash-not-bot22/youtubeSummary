@@ -17,6 +17,13 @@ export function AuthForm() {
     e.preventDefault();
     setLoading(true);
 
+   const token = localStorage.getItem('accessToken');
+       const isAuthenticated = await nhost.auth.isAuthenticatedAsync();
+
+       if(token && isAuthenticated){
+        navigate('/home');
+       }
+
     try {
       if (mode === 'login') {
         const { error } = await nhost.auth.signIn({
@@ -31,8 +38,12 @@ export function AuthForm() {
           password,
         });
         if (error) throw new Error(error.message);
-        toast.success('Signed up successfully!');
+        toast.success('verify email to login');
       }
+      const token =  nhost.auth.getAccessToken();
+          if (token) {
+            localStorage.setItem('accessToken', token);
+          }
       navigate('/home'); // Redirect to the home page
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Authentication failed');
