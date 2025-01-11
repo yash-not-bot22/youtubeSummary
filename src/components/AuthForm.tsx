@@ -44,7 +44,9 @@ export function AuthForm() {
           if (token) {
             localStorage.setItem('accessToken', token);
           }
-      navigate('/home'); // Redirect to the home page
+          const isAuthenticatedf = await nhost.auth.isAuthenticatedAsync();
+          if(token && isAuthenticatedf)
+          navigate('/home'); // Redirect to the home page
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Authentication failed');
     } finally {
