@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import ReactMarkdown from 'react-markdown';
-import remarkGfm from 'remark-gfm'; // For GitHub-flavored Markdown
-import rehypeRaw from 'rehype-raw'; // For rendering raw HTML in Markdown
+import remarkGfm from 'remark-gfm';
+import rehypeRaw from 'rehype-raw';
 import { Youtube, Send, LogOut } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useSignOut, useUserId } from '@nhost/react';
@@ -9,7 +9,6 @@ import { fetchN8nData } from '../lib/api';
 import toast from 'react-hot-toast';
 import { nhost } from '../lib/nhost';
 
-// Define TypeScript interfaces
 interface VideoSummary {
   id: string;
   video_id: string;
@@ -19,8 +18,7 @@ interface VideoSummary {
 
 function extractYouTubeVideoId(url: string): string | null {
   const regex = /(?:https?:\/\/)?(?:www\.)?(?:youtube\.com\/(?:[^\/\n\s]+\/\S+\/|(?:v|embed|e)\/|\S*?[?&]v=)|youtu\.be\/)([a-zA-Z0-9_-]{11})/;
-  const match = url.match(regex);
-  return match ? match[1] : null;
+  return url.match(regex)?.[1] || null;
 }
 
 export function HomePage() {
@@ -32,37 +30,54 @@ export function HomePage() {
   const { signOut } = useSignOut();
   const userId = useUserId();
 
-  // Fetch access token
-  const fetchAccessToken = async (): Promise<string | null> => {
-    const tokenResponse = await nhost.auth.getAccessToken();
-    return tokenResponse || null;
+  const saveTokenToLocalStorage = async () => {
+    const token = await nhost.auth.getAccessToken();
+    if (token) {
+      localStorage.setItem('accessToken', token);
+    }
   };
 
-  // Fetch history from the Nhost backend
+  const validateSession = async () => {
+    const token = localStorage.getItem('accessToken');
+    const isAuthenticated = await nhost.auth.isAuthenticatedAsync();
+    if (!token || !isAuthenticated) {
+      // Redirect to login if the token is missing or session is invalid
+      navigate('/login');
+    }
+  };
+
+  useEffect(() => {
+    validateSession();
+    saveTokenToLocalStorage();
+  }, []);
+
   const fetchHistory = async () => {
     try {
-      const token = await fetchAccessToken();
-      if (!token) throw new Error('Unable to fetch access token');
+      const token = localStorage.getItem('accessToken');
+      if (!token) throw new Error('Access token not found');
 
-      const response = await fetch('https://jodjwamdtsdokxwwmdbi.hasura.ap-south-1.nhost.run/v1/graphql', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          query: `
-            query {
-              video_summaries(where: { user_id: { _eq: "${userId}" } }, order_by: { created_at: desc }) {
-                id
-                video_id
-                summary
-                created_at
+      const response = await fetch(
+        'https://jodjwamdtsdokxwwmdbi.hasura.ap-south-1.nhost.run/v1/graphql',
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            query: `
+              query {
+                video_summaries(where: { user_id: { _eq: "${userId}" } }, order_by: { created_at: desc }) {
+                  id
+                  video_id
+                  summary
+                  created_at
+                }
               }
-            }
-          `,
-        }),
-      });
+            `,
+          }),
+        }
+      );
 
       const { data } = await response.json();
       setHistory(data?.video_summaries || []);
@@ -72,16 +87,14 @@ export function HomePage() {
     }
   };
 
-  // Fetch history on component mount
   useEffect(() => {
     if (userId) fetchHistory();
   }, [userId]);
 
-  // Handle form submission
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    setSummary(''); // Clear previous summary
+    setSummary('');
 
     try {
       const videoId = extractYouTubeVideoId(youtubeLink);
@@ -90,10 +103,9 @@ export function HomePage() {
       const n8nResponse = await fetchN8nData({ video_id: videoId });
       if (n8nResponse.error) throw new Error(n8nResponse.error);
 
-      const token = await fetchAccessToken();
-      if (!token) throw new Error('Unable to fetch access token');
+      const token = localStorage.getItem('accessToken');
+      if (!token) throw new Error('Access token not found');
 
-      // Store the summary in the Nhost backend
       await fetch('https://jodjwamdtsdokxwwmdbi.hasura.ap-south-1.nhost.run/v1/graphql', {
         method: 'POST',
         headers: {
@@ -113,7 +125,6 @@ export function HomePage() {
         }),
       });
 
-      // Update history locally
       setHistory((prev) => [
         { id: crypto.randomUUID(), video_id: videoId, summary: n8nResponse.summary, created_at: new Date().toISOString() },
         ...prev,
@@ -129,10 +140,10 @@ export function HomePage() {
     }
   };
 
-  // Handle logout
   const handleLogout = async () => {
     await signOut();
-    navigate('/');
+    localStorage.removeItem('accessToken');
+    navigate('/login');
   };
 
   return (
@@ -141,19 +152,16 @@ export function HomePage() {
       <div className="w-1/4 bg-white rounded-lg shadow-md p-4 mr-4">
         <h2 className="text-lg font-bold text-gray-800 mb-4">History</h2>
         <ul className="space-y-4">
-          {history.map((item) => {
-            const firstLine = item.summary.split('\n')[0]; // Extract the first line of the summary
-            return (
-              <li
-                key={item.id}
-                className="cursor-pointer p-2 border rounded-lg hover:bg-gray-100"
-                onClick={() => setSummary(item.summary)}
-              >
-                <p className="font-medium text-sm text-gray-700 truncate">{firstLine || item.video_id}</p>
-                <p className="text-xs text-gray-500">{new Date(item.created_at).toLocaleString()}</p>
-              </li>
-            );
-          })}
+          {history.map((item) => (
+            <li
+              key={item.id}
+              className="cursor-pointer p-2 border rounded-lg hover:bg-gray-100"
+              onClick={() => setSummary(item.summary)}
+            >
+              <p className="font-medium text-sm text-gray-700 truncate">{item.summary.split('\n')[0] || item.video_id}</p>
+              <p className="text-xs text-gray-500">{new Date(item.created_at).toLocaleString()}</p>
+            </li>
+          ))}
         </ul>
       </div>
 
