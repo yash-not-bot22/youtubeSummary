@@ -17,36 +17,35 @@ export function AuthForm() {
     e.preventDefault();
     setLoading(true);
 
-   const token = localStorage.getItem('accessToken');
-       const isAuthenticated = await nhost.auth.isAuthenticatedAsync();
-
-       if(token && isAuthenticated){
-        navigate('/home');
-       }
-
     try {
       if (mode === 'login') {
+        // Handle login
         const { error } = await nhost.auth.signIn({
           email,
           password,
         });
         if (error) throw new Error(error.message);
-        toast.success('Logged in successfully!');
+
+        const token = await nhost.auth.getAccessToken();
+        if (token) {
+          localStorage.setItem('accessToken', token);
+        }
+
+        const isAuthenticated = await nhost.auth.isAuthenticatedAsync();
+        if (isAuthenticated) {
+          toast.success('Logged in successfully!');
+          navigate('/home'); // Navigate to home only for login
+        }
       } else {
+        // Handle signup
         const { error } = await nhost.auth.signUp({
           email,
           password,
         });
         if (error) throw new Error(error.message);
-        toast.success('verify email to login');
+
+        toast.success('Signup successful! Please verify your email to login.');
       }
-      const token =  nhost.auth.getAccessToken();
-          if (token) {
-            localStorage.setItem('accessToken', token);
-          }
-          const isAuthenticatedf = await nhost.auth.isAuthenticatedAsync();
-          if(token && isAuthenticatedf)
-          navigate('/home'); // Redirect to the home page
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Authentication failed');
     } finally {
