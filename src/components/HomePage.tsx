@@ -57,10 +57,7 @@ export function HomePage() {
       navigate('/home');
       setreload(true);
     }
-    else
-    {
-      navigate('/')
-    }
+   
   }, [isVerified]);
 
   useEffect(() => {
@@ -68,10 +65,7 @@ export function HomePage() {
     {
       navigate('/home');
     }
-    else
-    {
-      navigate('/')
-    }
+    
   }, []);
 
   useEffect(() => {

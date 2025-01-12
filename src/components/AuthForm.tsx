@@ -3,27 +3,77 @@ import { Mail, Lock, Loader2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { nhost } from '../lib/nhost';
+import { useSignOut} from '@nhost/react';
 
 type AuthMode = 'login' | 'signup';
 
 export function AuthForm() {
+  const { signOut } = useSignOut();
   const [mode, setMode] = useState<AuthMode>('login');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
+  const handleLogout = async () => {
+    await signOut();
+    
+  };
+
+
+
+function clearAllSiteData() {
+  // Clear Local Storage
+  localStorage.clear();
+
+  // Clear Session Storage
+  sessionStorage.clear();
+
+  // Clear Cookies
+  document.cookie.split(";").forEach((cookie) => {
+    const [name] = cookie.split("=");
+    document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 UTC;path=/`;
+  });
+
+  if (navigator.serviceWorker) {
+    navigator.serviceWorker.getRegistrations().then((registrations) => {
+      registrations.forEach((registration) => registration.unregister());
+    });
+  }
+
+
+  
+
+  // (Optional) Reload the Page
+}
+
+function wait() {
+  return new Promise((resolve) => setTimeout(resolve, 500));
+}
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
 
+
+
     try {
       if (mode === 'login') {
 
+
+        
+        
         const isAuthenticated2  = await nhost.auth.isAuthenticatedAsync();
 
+
         if(isAuthenticated2){
-          navigate('/home')
+            handleLogout();
+            clearAllSiteData();
+            
+          await wait();
+            
+            
+          
         }
 
         // Handle login
@@ -33,22 +83,34 @@ export function AuthForm() {
         });
         if (error) throw new Error(error.message);
 
-        const token = await nhost.auth.getAccessToken();
+        const token =  nhost.auth.getAccessToken();
         if (token) {
           localStorage.setItem('accessToken', token);
         }
 
         const isAuthenticated = await nhost.auth.isAuthenticatedAsync();
-        if (isAuthenticated) {
+        if (isAuthenticated && token) {
           toast.success('Logged in successfully!');
           navigate('/home'); // Navigate to home only for login
         }
       } else {
         // Handle signup
+
+        const isAuthenticated2  = await nhost.auth.isAuthenticatedAsync();
+        if(isAuthenticated2)
+        {
+          handleLogout();
+            clearAllSiteData();
+            
+          await wait();
+        }
         const { error } = await nhost.auth.signUp({
           email,
           password,
         });
+
+        
+        clearAllSiteData();
         if (error) throw new Error(error.message);
 
         toast.success('Signup successful! Please verify your email to login.');
