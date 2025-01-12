@@ -82,7 +82,7 @@ function wait() {
           password,
         });
         
-        if (error) throw new Error("Try again ");
+        if (error) throw new Error(error.message+" Try again ");
 
         const token =  nhost.auth.getAccessToken();
         if (token) {
@@ -112,7 +112,7 @@ function wait() {
 
         
         clearAllSiteData();
-        if (error) throw new Error("try again");
+        if (error) throw new Error(error.message+" Try again");
 
         toast.success('Signup successful! Please verify your email to login.');
       }
