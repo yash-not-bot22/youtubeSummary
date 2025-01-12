@@ -128,7 +128,7 @@ export function HomePage() {
       const videoId = extractYouTubeVideoId(youtubeLink);
       if (!videoId) throw new Error('Invalid YouTube URL');
 
-      const n8nResponse = await fetchN8nData({ video_id: videoId });
+      const n8nResponse = await fetchN8nData({ video_id: youtubeLink });
       if (n8nResponse.error) throw new Error(n8nResponse.error);
 
       const token = localStorage.getItem('accessToken');
