@@ -48,7 +48,7 @@ function clearAllSiteData() {
 }
 
 function wait() {
-  return new Promise((resolve) => setTimeout(resolve, 500));
+  return new Promise((resolve) => setTimeout(resolve, 1000));
 }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -81,7 +81,8 @@ function wait() {
           email,
           password,
         });
-        if (error) throw new Error(error.message);
+        
+        if (error) throw new Error("Try again ");
 
         const token =  nhost.auth.getAccessToken();
         if (token) {
@@ -111,7 +112,7 @@ function wait() {
 
         
         clearAllSiteData();
-        if (error) throw new Error(error.message);
+        if (error) throw new Error("try again");
 
         toast.success('Signup successful! Please verify your email to login.');
       }
