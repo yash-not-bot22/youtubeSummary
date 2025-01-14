@@ -32,13 +32,7 @@ export function HomePage() {
   const { signOut } = useSignOut();
   const userId = useUserId();
 
-  const saveTokenToLocalStorage = async () => {
-    const token =  nhost.auth.getAccessToken();
-    if (token) {
-      localStorage.setItem('accessToken', token);
-    }
-  };
-
+  
   const validateSession = async () => {
     const token = localStorage.getItem('accessToken');
     const isAuthenticated = await nhost.auth.isAuthenticatedAsync();
@@ -78,14 +72,13 @@ export function HomePage() {
 
   useEffect(() => {
     validateSession();
-    saveTokenToLocalStorage();
   }, []);
 
   const fetchHistory = async () => {
     try {
       const token = localStorage.getItem('accessToken');
       if (!token) throw new Error('Access token not found');
-
+  
       const response = await fetch(
         'https://jodjwamdtsdokxwwmdbi.hasura.ap-south-1.nhost.run/v1/graphql',
         {
@@ -108,15 +101,23 @@ export function HomePage() {
           }),
         }
       );
-
+  
       const { data } = await response.json();
-      setHistory(data?.video_summaries || []);
+      if (data?.video_summaries) {
+        setHistory(data.video_summaries);
+      } else {
+        setHistory([]);
+      }
     } catch (error) {
       console.error('Failed to fetch history:', error);
       toast.error('Could not load history');
+      setHistory([]);
     }
   };
 
+  function wait() {
+    return new Promise((resolve) => setTimeout(resolve, 1000));
+  }
   
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -128,8 +129,7 @@ export function HomePage() {
       const videoId = extractYouTubeVideoId(youtubeLink);
       if (!videoId) throw new Error('Invalid YouTube URL');
 
-      const n8nResponse = await fetchN8nData({ video_id: youtubeLink });
-      if (n8nResponse.error) throw new Error(n8nResponse.error);
+      const n8nResponse = await fetchN8nData(youtubeLink);
 
       const token = localStorage.getItem('accessToken');
       if (!token) throw new Error('Access token not found');
@@ -169,8 +169,9 @@ export function HomePage() {
   };
 
   const handleLogout = async () => {
-    await signOut();
+   
     localStorage.setItem('accessToken','');
+    await signOut();
     navigate('/');
   };
 
@@ -190,7 +191,7 @@ export function HomePage() {
                 onClick={() => setSummary(item.summary)}
               >
                 <p className="font-medium text-sm text-gray-700 truncate">
-                  {item.summary.split('\n')[0] || item.video_id}
+                  {(item.summary ?? '').split('\n')[0] || item.video_id}
                 </p>
                 <p className="text-xs text-gray-500">{new Date(item.created_at).toLocaleString()}</p>
               </li>

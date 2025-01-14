@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Mail, Lock, Loader2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
@@ -8,48 +8,39 @@ import { useSignOut} from '@nhost/react';
 type AuthMode = 'login' | 'signup';
 
 export function AuthForm() {
-  const { signOut } = useSignOut();
   const [mode, setMode] = useState<AuthMode>('login');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
-  const handleLogout = async () => {
-    await signOut();
-    
-  };
 
-
-
-function clearAllSiteData() {
-  // Clear Local Storage
-  localStorage.clear();
-
-  // Clear Session Storage
-  sessionStorage.clear();
-
-  // Clear Cookies
-  document.cookie.split(";").forEach((cookie) => {
-    const [name] = cookie.split("=");
-    document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 UTC;path=/`;
-  });
-
-  if (navigator.serviceWorker) {
-    navigator.serviceWorker.getRegistrations().then((registrations) => {
-      registrations.forEach((registration) => registration.unregister());
-    });
+  const saveToken= async () => {
+    const session = await nhost.auth.getSession();
+  if (!session) {
+    throw new Error('User is not authenticated');
   }
 
-
+  const token = session.accessToken;
+  if (token) {
+    localStorage.setItem('accessToken', token);
+  }
+  else{
+    throw new Error('not authenticated');
+  }
+  }
   
+  
+      
+    useEffect(() => {
+      const token = localStorage.getItem('accessToken');
+      if (token) {
+        navigate('/home');
+      }
+    }, []);
 
-  // (Optional) Reload the Page
-}
+      
 
-function wait() {
-  return new Promise((resolve) => setTimeout(resolve, 1000));
-}
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -63,56 +54,35 @@ function wait() {
 
         
         
-        const isAuthenticated2  = await nhost.auth.isAuthenticatedAsync();
-
-
-        if(isAuthenticated2){
-            handleLogout();
-            clearAllSiteData();
-            
-          await wait();
-            
-            
-          
-        }
 
         // Handle login
         const { error } = await nhost.auth.signIn({
           email,
           password,
         });
-        
-        if (error) throw new Error(error.message+" Try again ");
+        await saveToken();
+        const token = localStorage.getItem('accessToken');
 
-        const token =  nhost.auth.getAccessToken();
         if (token) {
-          localStorage.setItem('accessToken', token);
-        }
-
-        const isAuthenticated = await nhost.auth.isAuthenticatedAsync();
-        if (isAuthenticated && token) {
           toast.success('Logged in successfully!');
           navigate('/home'); // Navigate to home only for login
         }
+        
+        if (error) throw new Error(error.message);
+
+       
       } else {
         // Handle signup
 
-        const isAuthenticated2  = await nhost.auth.isAuthenticatedAsync();
-        if(isAuthenticated2)
-        {
-          handleLogout();
-            clearAllSiteData();
-            
-          await wait();
-        }
+        
         const { error } = await nhost.auth.signUp({
           email,
           password,
         });
 
         
-        clearAllSiteData();
-        if (error) throw new Error(error.message+" Try again");
+        
+        if (error) throw new Error(error.message);
 
         toast.success('Signup successful! Please verify your email to login.');
       }
